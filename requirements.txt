@@ -4,4 +4,4 @@ pandas
 pillow
 opencv-python-headless
 scikit-learn
-ultralytics
+ultralytics==8.0.196
