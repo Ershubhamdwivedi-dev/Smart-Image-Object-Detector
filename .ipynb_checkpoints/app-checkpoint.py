@@ -1,19 +1,14 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-
-# IMPORTANT FIX: must use headless-safe opencv
-import cv2
-
 from ultralytics import YOLO
 
 # -----------------------------
-# LOAD MODEL SAFELY
+# LOAD MODEL
 # -----------------------------
 @st.cache_resource
 def load_model():
-    # safe official model download
-    model = YOLO("yolov8n.pt")
+    model = YOLO("yolov8n.pt")   # auto-download
     return model
 
 model = load_model()
@@ -21,43 +16,36 @@ model = load_model()
 # -----------------------------
 # UI
 # -----------------------------
-st.title("🔥 Smart Image Object Detector")
-st.write("Upload any image and detect objects using YOLOv8")
+st.title("🔥 Smart Image Object Detector ")
+st.write("Upload any image → Detect objects (person, dog, car etc.)")
 
 uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
 
 # -----------------------------
-# PROCESS IMAGE
+# PREDICTION
 # -----------------------------
-if uploaded_file:
+if uploaded_file is not None:
+    img = Image.open(uploaded_file).convert("RGB")
+    st.image(img, caption="Uploaded Image", use_column_width=True)
 
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_container_width=True)
+    img_np = np.array(img)
 
-    with st.spinner("Detecting objects..."):
-        results = model(image)
+    results = model(img_np)
 
-    # draw results
-    result_img = results[0].plot()
+    # show image with boxes
+    st.image(results[0].plot(), caption="Detected Objects")
 
-    st.image(result_img, caption="Detected Objects", use_container_width=True)
-
-    # -----------------------------
-    # EXTRACT LABELS
-    # -----------------------------
-    labels = []
-
-    for r in results:
-        for box in r.boxes:
-            cls_id = int(box.cls.item())
-            labels.append(model.names[cls_id])
-
-    unique_labels = sorted(set(labels))
-
+    # labels
     st.subheader("Detected Objects:")
 
-    if len(unique_labels) == 0:
-        st.warning("No objects detected")
-    else:
-        for label in unique_labels:
-            st.write("👉", label)
+    names = results[0].names
+    boxes = results[0].boxes
+
+    detected = set()
+
+    for box in boxes:
+        cls_id = int(box.cls[0])
+        detected.add(names[cls_id])
+
+    for obj in detected:
+        st.write(f"👉 {obj}")
